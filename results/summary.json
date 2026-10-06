@@ -80,5 +80,21 @@
     "database_consistency_tested": false
   },
   "public_templates_deployed": false,
-  "current_cold_start_state_verified_healthy": false
+  "current_cold_start_state_verified_healthy": true,
+  "cold_start_recovery_20261006": {
+    "observation_time_cst": "22:34",
+    "scope": "cluster/replication/resources/Linux attachment/monitoring/normal backup state",
+    "nodes_online": 2,
+    "drbd_uptodate_pairs": 4,
+    "business_owner": "stor-svc-01",
+    "monitor_targets_up": 10,
+    "active_alerts": 0,
+    "nm_persistent_networking_enabled": true,
+    "ifcfg_not_rewritten": true,
+    "fencing_and_quorum_preserved": true,
+    "full_disk_hash_checked": false,
+    "actual_reboot_tested": false,
+    "windows_smb_application_retested": false,
+    "public_parameterized_runtime_deployed": false
+  }
 }
