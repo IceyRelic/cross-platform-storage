@@ -1,0 +1,25 @@
+resource dev {
+    protocol C;
+
+    on stor-svc-01 {
+        device    /dev/drbd1;
+        disk      /dev/vg_storage/lv_dev;
+        address   192.0.2.10:7790;
+        meta-disk /dev/vg_storage/lv_dev_meta[0];
+    }
+
+    on stor-svc-02 {
+        device    /dev/drbd1;
+        disk      /dev/vg_storage/lv_dev;
+        address   192.0.2.20:7790;
+        meta-disk /dev/vg_storage/lv_dev_meta[0];
+    }
+
+    net {
+        fencing resource-and-stonith;
+    }
+    handlers {
+        fence-peer "/usr/lib/drbd/crm-fence-peer.9.sh --timeout 300 --dc-timeout 330";
+        unfence-peer "/usr/lib/drbd/crm-unfence-peer.9.sh";
+    }
+}

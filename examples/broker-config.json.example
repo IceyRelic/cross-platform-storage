@@ -1,0 +1,33 @@
+{
+  "read_only": false,
+  "off_policy": "automatic_peer_challenge",
+  "mapping": {
+    "stor-svc-01": {
+      "path": "FILL_ABSOLUTE_VMX_PATH",
+      "bios_uuid": "FILL_EXACT_BIOS_UUID",
+      "mac": "FILL_EXACT_MAC"
+    },
+    "stor-svc-02": {
+      "path": "FILL_ABSOLUTE_VMX_PATH",
+      "bios_uuid": "FILL_EXACT_BIOS_UUID",
+      "mac": "FILL_EXACT_MAC"
+    }
+  },
+  "callers": {
+    "stor-svc-01": "FILL_64_CHARACTER_PRIVATE_TOKEN",
+    "stor-svc-02": "FILL_64_CHARACTER_PRIVATE_TOKEN"
+  },
+  "ssh": [
+    "ssh",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "UserKnownHostsFile=FILL_PRIVATE_KNOWN_HOSTS",
+    "-i",
+    "FILL_PRIVATE_IDENTITY_FILE"
+  ]
+}

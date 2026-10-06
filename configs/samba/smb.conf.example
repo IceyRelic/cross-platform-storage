@@ -1,0 +1,56 @@
+# See smb.conf.example for a more detailed config file or
+# read the smb.conf manpage.
+# Run 'testparm' to verify the config is correct after
+# you modified it.
+[global]
+   workgroup = WORKGROUP
+   server string = File Service Platform
+   netbios name = STOR-SVC-01
+   security = user
+   map to guest = Bad User
+
+   passdb backend = tdbsam
+
+   log file = /var/log/samba/%m.log
+   max log size = 1000
+
+   load printers = no
+   printing = bsd
+   disable spoolss = yes
+
+   vfs objects = recycle
+   recycle:repository = .recycle/%U
+   recycle:keeptree = yes
+   recycle:versions = yes
+   recycle:touch = yes
+   recycle:maxsize = 0
+
+   deadtime = 15
+   kernel oplocks = no
+   oplocks = yes
+   level2 oplocks = yes
+   strict locking = yes
+
+    netbios name = FILEVIP
+    netbios aliases = SMB-DESIGN SMB-FINANCE
+
+[design]
+   path = /data/design
+   browseable = yes
+   writable = yes
+   read list = finance1
+   valid users = @designgrp finance1
+   create mask = 0660
+   directory mask = 2770
+   force group = designgrp
+   locking = yes
+
+[finance]
+   path = /data/finance
+   browseable = yes
+   writable = yes
+   valid users = @financegrp
+   create mask = 0660
+   directory mask = 2770
+   force group = financegrp
+   locking = yes

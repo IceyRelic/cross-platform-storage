@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodic LUN ordinary-file publish check
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=60s
+AccuracySec=5s
+Unit=lun01-publish.service
+
+[Install]
+WantedBy=timers.target

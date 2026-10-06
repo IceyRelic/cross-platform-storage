@@ -1,0 +1,118 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+# 【中文注释】用途：Linux隔离代理：校验私有配置和TLS，向宿主查询或请求peer off，再按已验证结果返回退出码。
+# 【中文注释】阅读副本：原版与原SHA保留；依赖源码哈希/AST抽取的驱动应执行验证过的原版。
+# 【中文注释】顺序：先看常量/配置 → 关键函数 → 顶层或main入口 → 异常与清理。
+# 【中文注释】历史版本能力按函数体/所属阶段判定，不能把新增守卫倒写到旧版。
+"""Lab agent: automatically acquire a bound one-use peer-off capability."""
+from __future__ import print_function
+# 发布版保留assert身份/准入守卫，拒绝-O/-OO以免移除这些条件。
+if not __debug__:
+    raise RuntimeError('Optimized Python disables safety guards; refused')
+import getopt,json,os,socket,ssl,stat,sys,uuid,urllib2
+
+ROOT='/etc/codex-storage-power-channel'
+PINS={
+ 'stor-svc-01':('{{LOCAL_NODE1_UUID}}','{{LOCAL_NODE1_MAC}}'),
+ 'stor-svc-02':('{{LOCAL_NODE2_UUID}}','{{LOCAL_NODE2_MAC}}')}
+# 【中文注释】多行资料/远程代码模板；字符串保持原样。代码型片段另见旁边的远程片段解读。
+META='''<resource-agent name="fence_workstation_lab" shortdesc="Workstation lab authenticated peer off">
+<longdesc>Automatically acquire a session-bound one-use peer-off capability. Success requires explicit native off confirmations. No on or reboot support.</longdesc>
+<vendor-url>https://developer.broadcom.com/xapis/vmware-workstation-pro-api/</vendor-url>
+<parameters>
+<parameter name="action" unique="0" required="0"><getopt mixed="-o, --action=[action]"/><content type="string" default="status"/><shortdesc lang="en">Power action</shortdesc></parameter>
+<parameter name="port" unique="1" required="0"><getopt mixed="-n, --plug=[node]"/><content type="string"/><shortdesc lang="en">Pinned storage node</shortdesc></parameter>
+<parameter name="request_id" unique="0" required="0"><getopt mixed="--request-id=[hex]"/><content type="string"/><shortdesc lang="en">Optional request ID for replay diagnostics</shortdesc></parameter>
+</parameters>
+<actions><action name="off" timeout="180"/><action name="status" timeout="30"/><action name="monitor" timeout="60"/><action name="list" timeout="60"/><action name="metadata"/><action name="validate-all"/></actions>
+</resource-agent>'''
+
+
+# 【中文注释】函数 credential：读取root私有配置并核对调用者、URL和证书，创建验证TLS的客户端上下文。
+def credential():
+    # 【中文注释】身份/路径/权限守卫：只允许本轮授权对象，阻止链接、替换或跨目录操作。
+    assert not os.path.islink(ROOT) and os.stat(ROOT).st_uid==0
+    # 【中文注释】身份/路径/权限守卫：只允许本轮授权对象，阻止链接、替换或跨目录操作。
+    assert stat.S_IMODE(os.stat(ROOT).st_mode)==0700
+    path=ROOT+'/credential.json'
+    # 【中文注释】身份/路径/权限守卫：只允许本轮授权对象，阻止链接、替换或跨目录操作。
+    assert not os.path.islink(path) and os.stat(path).st_uid==0
+    # 【中文注释】身份/路径/权限守卫：只允许本轮授权对象，阻止链接、替换或跨目录操作。
+    assert stat.S_IMODE(os.stat(path).st_mode)==0600
+    c=json.load(open(path))
+    assert c['caller']==socket.gethostname() and c['caller'] in PINS
+    assert c['url']=='https://localhost:9447/v1/power'
+    assert isinstance(c['bearer'],basestring) and len(c['bearer'])==64
+    cert=ROOT+'/channel-cert.pem'
+    # 【中文注释】身份/路径/权限守卫：只允许本轮授权对象，阻止链接、替换或跨目录操作。
+    assert not os.path.islink(cert) and os.stat(cert).st_uid==0
+    return c,ssl.create_default_context(cafile=cert)
+
+
+# 【中文注释】函数 request：发送本轮带nonce的认证请求，并核对响应的目标、身份和平台来源。
+def request(target,c,context,action='status',nonce=None,permit=None):
+    assert target in PINS
+    nonce=nonce or uuid.uuid4().hex
+    body={'action':action,'node':target,'nonce':nonce}
+    if permit is not None:body['permit']=permit
+    req=urllib2.Request(c['url'],json.dumps(body),{'Content-Type':'application/json',
+        'X-Storage-Caller':c['caller'],'Authorization':'Bearer '+c['bearer']})
+    response=urllib2.urlopen(req,timeout=110 if action=='off' else 35,context=context)
+    assert response.getcode()==200
+    data=json.load(response)
+    assert data['node']==target and data['nonce']==nonce and data['off_policy']=='automatic_peer_challenge'
+    assert (data['bios_uuid'],data['mac'])==PINS[target]
+    assert data['source']=='native_vmcli_power_query'
+    assert data['power_state'] in ('on','off','paused','suspended')
+    return data
+
+
+# 【中文注释】函数 status：查询本次目标的明确平台电源状态并校验身份；查询失败/未知/paused不算成功off。
+def status(target,c,context):return request(target,c,context)['power_state']
+
+
+# 【中文注释】函数 main：程序入口：解析参数/标准输入并按分支执行；导入安全性仍取决于模块顶层代码。
+def main():
+    options={}
+    if sys.argv[1:]:
+        parsed,extra=getopt.getopt(sys.argv[1:],'o:n:', ['action=','plug=','request-id='])
+        assert not extra
+        for key,value in parsed:options['action' if key in ('-o','--action') else 'request_id' if key=='--request-id' else 'port']=value
+    else:
+        text=sys.stdin.read(8193);assert len(text)<=8192
+        for line in text.splitlines():
+            if not line or line.lstrip().startswith('#'):continue
+            key,value=line.split('=',1);options[key.strip()]=value
+    action=options.get('action','status').lower()
+    if action=='metadata':print(META);return 0
+    if action not in ('off','status','monitor','list','validate-all'):
+        raise ValueError('Unsupported power action')
+    c,context=credential()
+    if action=='validate-all':return 0
+    if action=='off':
+        target=options.get('port',options.get('nodename',''));assert target!=c['caller']
+        nonce=options.get('request_id') or uuid.uuid4().hex
+        admission=request(target,c,context,'prepare_off',nonce)
+        assert admission['operation']=='prepare_off'
+        data=request(target,c,context,'off',nonce,admission['permit'])
+        assert data['power_state']=='off' and data['operation']=='off'
+        assert data['confirmation_states'][-2:]==['off','off']
+        assert status(target,c,context)=='off' and status(target,c,context)=='off'
+        print('native_off_verified')
+        return 0
+    if action=='status':
+        state=status(options.get('port',options.get('nodename','')),c,context)
+        return 0 if state=='on' else 2 if state=='off' else 1
+    for node in sorted(PINS):
+        status(node,c,context)
+        if action=='list':print(node+','+node)
+    return 0
+
+
+# 【中文注释】脚本执行入口；只有本分支受main判断保护，前面的顶层语句仍可能在导入时执行。
+if __name__=='__main__':
+    try:result=main()
+    # 【中文注释】保留并处理这一类失败；是否重试/记录/返回非零由本分支定义，不应直接算成功。
+    except Exception:
+        sys.stderr.write('Lab agent request failed; details withheld.\n');result=1
+    sys.exit(result)

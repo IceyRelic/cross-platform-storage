@@ -1,0 +1,10 @@
+[Unit]
+Description=Run backup-manifest daily
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=24h
+Unit=backup-manifest.service
+
+[Install]
+WantedBy=timers.target

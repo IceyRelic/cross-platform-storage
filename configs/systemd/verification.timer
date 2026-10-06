@@ -1,0 +1,10 @@
+[Unit]
+Description=Run verification daily
+
+[Timer]
+OnBootSec=20min
+OnUnitActiveSec=24h
+Unit=verification.service
+
+[Install]
+WantedBy=timers.target

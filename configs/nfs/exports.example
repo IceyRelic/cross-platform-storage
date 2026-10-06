@@ -1,0 +1,3 @@
+/data/dev/project 192.0.2.0/24(rw,sync,no_subtree_check)
+/data/dev/render  192.0.2.0/24(rw,sync,no_subtree_check)
+/data/dev/config  192.0.2.0/24(ro,sync,no_subtree_check)

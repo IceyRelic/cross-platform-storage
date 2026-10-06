@@ -1,0 +1,12 @@
+[Unit]
+Description=Follow completed backup generation with serial verification
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+UMask=0022
+ExecStart=/usr/bin/python /usr/local/sbin/backup-followup.py
+TimeoutStartSec=35min
+NoNewPrivileges=true

@@ -1,0 +1,386 @@
+groups:
+  - name: infra-alerts
+    rules:
+      - alert: HostDown
+        expr: up{job="node"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} 不可达"
+          description: "Prometheus 无法抓取 {{ $labels.instance }} 的 node_exporter 指标"
+
+      - alert: CpuUsageWarning
+        expr: 100 - (avg by(instance)(irate(node_cpu_seconds_total{job="node",mode="idle"}[5m])) * 100) > 70
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} CPU 使用率告警"
+          description: "{{ $labels.instance }} CPU 持续高于 70%"
+
+      - alert: CpuUsageCritical
+        expr: 100 - (avg by(instance)(irate(node_cpu_seconds_total{job="node",mode="idle"}[5m])) * 100) > 85
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} CPU 使用率严重"
+          description: "{{ $labels.instance }} CPU 持续高于 85%"
+
+      - alert: CpuUsageEmergency
+        expr: 100 - (avg by(instance)(irate(node_cpu_seconds_total{job="node",mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: emergency
+        annotations:
+          summary: "{{ $labels.instance }} CPU 使用率紧急"
+          description: "{{ $labels.instance }} CPU 持续高于 95%"
+
+      - alert: MemoryUsageHigh
+        expr: (1 - node_memory_MemAvailable_bytes{job="node"} / node_memory_MemTotal_bytes{job="node"}) * 100 > 90
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} 内存使用率过高"
+          description: "{{ $labels.instance }} 内存持续高于 90%"
+
+      - alert: DiskUsageWarning
+        expr: (
+                node_filesystem_size_bytes{job="node",fstype!~"tmpfs|overlay"}
+                - node_filesystem_avail_bytes{job="node",fstype!~"tmpfs|overlay"}
+              )
+              /
+              node_filesystem_size_bytes{job="node",fstype!~"tmpfs|overlay"} * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} 磁盘使用率告警"
+          description: "{{ $labels.instance }} {{ $labels.mountpoint }} 持续高于 80%"
+
+      - alert: DiskUsageCritical
+        expr: (
+                node_filesystem_size_bytes{job="node",fstype!~"tmpfs|overlay"}
+                - node_filesystem_avail_bytes{job="node",fstype!~"tmpfs|overlay"}
+              )
+              /
+              node_filesystem_size_bytes{job="node",fstype!~"tmpfs|overlay"} * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} 磁盘使用率严重"
+          description: "{{ $labels.instance }} {{ $labels.mountpoint }} 持续高于 90%"
+
+      - alert: IOWaitHigh
+        expr: avg by(instance)(irate(node_cpu_seconds_total{job="node",mode="iowait"}[5m])) * 100 > 20
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} IO Wait 过高"
+          description: "{{ $labels.instance }} IO Wait 持续高于 20%"
+
+      - alert: LoadHigh
+        expr: node_load5{job="node"} > count by(instance)(node_cpu_seconds_total{job="node",mode="idle"})
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} 系统负载过高"
+          description: "{{ $labels.instance }} 5分钟平均负载持续高于 CPU 核心数"
+
+  - name: storage-service-alerts
+    rules:
+      - alert: NFSServiceDown
+        expr: max(storage_nfs_server_up) < 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "NFS 服务停止"
+          description: "当前没有任何节点提供 NFS 服务"
+
+      - alert: SMBServiceDown
+        expr: max(storage_smb_up) < 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SMB 服务停止"
+          description: "当前没有任何节点提供 SMB 服务"
+
+      - alert: ISCSITargetDown
+        expr: max(storage_iscsi_target_up) < 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "iSCSI Target 离线"
+          description: "当前没有任何节点提供 iSCSI Target 服务"
+
+  - name: backup-alerts
+    rules:
+      - alert: RsyncServiceDown
+        expr: namedprocess_namegroup_num_procs{instance="192.0.2.30:9256",groupname="rsync"} < 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "backup-01 上 rsync 服务未运行"
+          description: "backup-01 的 rsync 进程不存在"
+
+      - alert: BackupJobFailed
+        expr: (backup_job_status == 0) or label_replace((backup_pipeline_status == 0) unless on(instance, job) (backup_job_status == 0), "name", "pipeline", "", "")
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "备份任务失败"
+          description: "{{ $labels.name }} 备份失败"
+
+      - alert: BackupNotRecent
+        expr: time() - backup_last_success_timestamp > 86400
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "最近 24 小时没有成功备份"
+          description: "{{ $labels.name }} 最近 24 小时没有成功备份"
+
+      - alert: BackupPipelineMetricsMissing
+        expr: (storage_vip_present == 1) unless on(instance, job) backup_pipeline_status
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "存储VIP节点缺少备份流程指标"
+          description: "当前VIP节点未提供backup_pipeline_status，请检查备份任务和指标采集"
+
+      - alert: BackupPipelineStuck
+        expr: (backup_pipeline_status == 2) and on(instance, job) (time() - backup_pipeline_started_timestamp > 7200) and on(instance, job) (time() - node_boot_time_seconds > 900)
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "备份流程运行时间过长"
+          description: "备份流程仍在运行且已超过2小时，请检查任务日志与连接状态"
+
+  - name: backup-md5-alerts
+    rules:
+      - alert: BackupManifestFailed
+        expr: backup_manifest_status == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "备份节点MD5清单生成失败"
+          description: "{{ $labels.name }}的MD5清单生成失败"
+
+      - alert: SourceManifestFailed
+        expr: source_manifest_status == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "存储节点MD5清单生成失败"
+          description: "{{ $labels.name }}的MD5清单生成失败"
+
+      - alert: BackupDataMismatch
+        expr: backup_md5_match == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MD5清单不一致"
+          description: "{{ $labels.name }}的MD5清单不匹配"
+
+      - alert: BackupManifestNotRecent
+        expr: time() - backup_manifest_timestamp > 86400
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MD5 清单长时间未更新"
+          description: "{{ $labels.name }} 的 MD5 清单超过 24 小时未更新"
+
+      - alert: BackupManifestSuccess
+        expr: ((backup_verified_generation > 0) == on(node) group_left max by(node) (backup_pipeline_generation and on(instance, job) (backup_pipeline_status == 1) and on(instance, job) (storage_vip_present == 1) and on(instance, job) (time() - backup_pipeline_completed_timestamp >= 0) and on(instance, job) (time() - backup_pipeline_completed_timestamp < 1800))) and on(name) (backup_md5_match == 1) and on(name) (time() - backup_md5_check_timestamp >= 0) and on(name) (time() - backup_md5_check_timestamp < 300) and on() (count(((backup_verified_generation > 0) == on(node) group_left max by(node) (backup_pipeline_generation and on(instance, job) (backup_pipeline_status == 1) and on(instance, job) (storage_vip_present == 1) and on(instance, job) (time() - backup_pipeline_completed_timestamp >= 0) and on(instance, job) (time() - backup_pipeline_completed_timestamp < 1800)))) == 3) and on() (count(backup_generation_verified == 1) == 3) and on() (count(backup_md5_match == 1) == 3) and on() (sum(storage_vip_present) == 1)
+        for: 0m
+        labels:
+          severity: info
+        annotations:
+          summary: "同一轮备份校验通过"
+          description: "{{ $labels.name }} 与当前主节点的备份代号一致，三份清单均已校验通过"
+
+  - name: cluster-role-alerts
+    rules:
+      - alert: StorageVIPMissing
+        expr: sum(storage_vip_present) == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "存储 VIP 丢失"
+          description: "当前没有任何节点持有存储 VIP"
+
+      - alert: StorageVIPDuplicated
+        expr: sum(storage_vip_present) > 1
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "存储 VIP 冲突"
+          description: "多个节点同时持有存储 VIP"
+
+      - alert: StorageVIPMovedFromPreferredNode
+        expr: storage_vip_present{node="stor-svc-01"} == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "存储 VIP 已从首选主节点漂移"
+          description: "当前 VIP 不在 stor-svc-01，说明发生了集群切换"
+
+      - alert: DRBDNoPrimary
+        expr: sum by(resource) (storage_drbd_primary) == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "DRBD 资源没有 Primary"
+          description: "{{ $labels.resource }} 当前没有 Primary"
+
+      - alert: DRBDMultiplePrimary
+        expr: sum by(resource) (storage_drbd_primary) > 1
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "DRBD 资源出现多个 Primary"
+          description: "{{ $labels.resource }} 检测到多个 Primary"
+
+      - alert: DRBDMovedFromPreferredNode
+        expr: storage_drbd_primary{node="stor-svc-01"} == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DRBD Primary 已从首选主节点漂移"
+          description: "{{ $labels.resource }} 的 Primary 不在 stor-svc-01，说明发生了切换"
+
+      - alert: DRBDPeerNotUpToDate
+        expr: max by(resource) (storage_drbd_peer_uptodate) == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DRBD 对端未完成同步"
+          description: "{{ $labels.resource }} 的对端副本当前不是 UpToDate"
+  - name: backup-history
+    rules:
+      - alert: BackupHistoryCaptureFailed
+        expr: backup_history_capture_status{instance="192.0.2.30:9100"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backup history checkpoint capture failed"
+          description: "The current backup could not be preserved as a verified history checkpoint"
+      - alert: BackupHistoryMetricsMissing
+        expr: absent(backup_history_capture_status{instance="192.0.2.30:9100",job="node"}) and on() (time() - node_boot_time_seconds{instance="192.0.2.30:9100",job="node"} > 3600)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backup history metrics are missing"
+          description: "History capture metrics are absent after the boot grace period"
+      - alert: BackupHistoryCaptureStuck
+        expr: (backup_history_capture_status{instance="192.0.2.30:9100"} == 2) and on(instance,job) (time() - backup_history_attempt_timestamp > 7200)
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backup history capture is taking too long"
+          description: "History capture has remained in progress for over two hours"
+  - name: storage-client-readiness
+    rules:
+      - alert: StorageClientNotReady
+        expr: ((storage_client_mount_ready{instance="192.0.2.50:9100",job="node"} == 0) or label_replace((storage_client_target_session_ready{instance="192.0.2.50:9100",job="node"} == 0) unless on(instance,job) (storage_client_mount_ready{instance="192.0.2.50:9100",job="node",protocol="iSCSI"} == 0), "protocol", "iSCSI", "", "")) and on(instance,job) ((up{instance="192.0.2.50:9100",job="node"} == 1) and on(instance,job) (time() - node_boot_time_seconds{instance="192.0.2.50:9100",job="node"} > 300))
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Storage client path is not ready"
+          description: "NFS or iSCSI mount/session identity check failed"
+      - alert: StorageClientReadinessStale
+        expr: ((up{instance="192.0.2.50:9100",job="node"} == 1) unless on(instance,job) (storage_client_check_timestamp_seconds{instance="192.0.2.50:9100",job="node"} >= time() - 180)) and on(instance,job) (time() - node_boot_time_seconds{instance="192.0.2.50:9100",job="node"} > 300)
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Storage client readiness metrics are missing or stale"
+          description: "No fresh client mount/session check after boot grace"
+  - name: lun01-file-backup
+    rules:
+      - alert: LUNFileBackupFailed
+        expr: (lun01_upload_status{instance="192.0.2.50:9100",job="node"} == 0) or (lun01_publish_status{instance="192.0.2.30:9100",job="node"} == 0)
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LUN file checkpoint task failed"
+          description: "The upload or verified publication step failed"
+      - alert: LUNFileBackupMetricsMissing
+        expr: (((up{instance="192.0.2.50:9100",job="node"} == 1) unless on(instance,job) lun01_upload_status{instance="192.0.2.50:9100",job="node"}) and on(instance,job) (time() - node_boot_time_seconds{instance="192.0.2.50:9100",job="node"} > 1800)) or (((up{instance="192.0.2.30:9100",job="node"} == 1) unless on(instance,job) lun01_publish_status{instance="192.0.2.30:9100",job="node"}) and on(instance,job) (time() - node_boot_time_seconds{instance="192.0.2.30:9100",job="node"} > 1800))
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LUN file backup metrics are missing"
+          description: "No task status after the boot grace period"
+      - alert: LUNFileBackupStuck
+        expr: ((lun01_upload_status{instance="192.0.2.50:9100",job="node"} == 2) and on(instance,job) (time() - lun01_upload_attempt_timestamp{instance="192.0.2.50:9100",job="node"} > 1800)) or ((lun01_publish_status{instance="192.0.2.30:9100",job="node"} == 2) and on(instance,job) (time() - lun01_publish_attempt_timestamp{instance="192.0.2.30:9100",job="node"} > 1800))
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LUN file backup is taking too long"
+          description: "Task has remained in progress for over thirty minutes"
+      - alert: LUNFileBackupNotRecent
+        expr: ((time() - lun01_publish_last_success_timestamp{instance="192.0.2.30:9100",job="node"} > 86400) or (absent(lun01_publish_last_success_timestamp{instance="192.0.2.30:9100",job="node"}) and on(instance,job) (lun01_publish_status{instance="192.0.2.30:9100",job="node"} >= 0) and on(instance,job) (time() - node_boot_time_seconds{instance="192.0.2.30:9100",job="node"} > 3600))) and on(instance,job) (up{instance="192.0.2.30:9100",job="node"} == 1)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LUN file checkpoint is not recent"
+          description: "No recent independently verified LUN file checkpoint"
+
+  - name: backup-followup-alerts
+    rules:
+      - alert: BackupFollowupFailed
+        expr: (backup_followup_status{job="node",instance="192.0.2.30:9100"} == 0) and on(instance,job) (up{job="node",instance="192.0.2.30:9100"} == 1)
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "备份后续校验失败"
+          description: "新完成代号的清单、校验或历史保存失败，请检查联动日志"
+      - alert: BackupFollowupStale
+        expr: (((up{job="node",instance="192.0.2.30:9100"} == 1) unless on(instance,job) backup_followup_checked_timestamp{job="node",instance="192.0.2.30:9100"}) or (time() - backup_followup_checked_timestamp{job="node",instance="192.0.2.30:9100"} > 180)) and on(instance,job) (up{job="node",instance="192.0.2.30:9100"} == 1) and on(instance,job) (time() - node_boot_time_seconds{job="node",instance="192.0.2.30:9100"} > 300)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "备份联动检查缺失或过期"
+          description: "备份端在线但未持续执行联动检查，请检查新计时和指标"
+      - alert: BackupFollowupStuck
+        expr: (backup_followup_status{job="node",instance="192.0.2.30:9100"} == 2) and on(instance,job) (time() - backup_followup_started_timestamp{job="node",instance="192.0.2.30:9100"} > 1200) and on(instance,job) (up{job="node",instance="192.0.2.30:9100"} == 1) and on(instance,job) (time() - node_boot_time_seconds{job="node",instance="192.0.2.30:9100"} > 300)
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "备份联动等待或执行过长"
+          description: "后续步骤持续等待或执行超过20分钟，请检查代号稳定性和服务"

@@ -1,0 +1,9 @@
+{
+  "uuid": "{{LOCAL_LUN_UUID}}",
+  "password_file": "/etc/lun01-file-backup.pass",
+  "metric": "/var/lib/node_exporter/textfile_collector/lun01-upload.prom",
+  "work": "/var/lib/lun01-file-backup",
+  "source": "/data/lun01",
+  "iqn": "iqn.2026-10.example.test:storage.lun01",
+  "role": "upload"
+}

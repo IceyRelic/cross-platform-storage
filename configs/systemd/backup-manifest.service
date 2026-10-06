@@ -1,0 +1,6 @@
+[Unit]
+Description=Generate backup MD5 manifest files
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /usr/local/bin/backup-manifest.sh

@@ -1,0 +1,107 @@
+# /etc/rsyncd: configuration file for rsync daemon mode
+
+# See rsyncd.conf man page for more options.
+
+# configuration example:
+
+# uid = nobody
+# gid = nobody
+# use chroot = yes
+# max connections = 4
+# pid file = /var/run/rsyncd.pid
+# exclude = lost+found/
+# transfer logging = yes
+# timeout = 900
+# ignore nonreadable = yes
+# dont compress   = *.gz *.tgz *.zip *.z *.Z *.rpm *.deb *.bz2
+
+# [ftp]
+#        path = /home/ftp
+#        comment = ftp export area
+uid = backupsvc
+gid = backupsvc
+use chroot = no
+max connections = 20
+pid file = /var/run/rsyncd.pid
+lock file = /var/run/rsync.lock
+log file = /var/log/rsyncd.log
+timeout = 600
+
+[design]
+fake super = yes
+path = /backup/design/current
+comment = design backup
+read only = no
+list = yes
+auth users = backupuser
+secrets file = /etc/rsyncd.secrets
+hosts allow = 192.0.2.10,192.0.2.20,192.0.2.100
+hosts deny = *
+
+[dev]
+fake super = yes
+path = /backup/dev/current
+comment = dev backup
+read only = no
+list = yes
+auth users = backupuser
+secrets file = /etc/rsyncd.secrets
+hosts allow = 192.0.2.10,192.0.2.20,192.0.2.100
+hosts deny = *
+
+[finance]
+fake super = yes
+path = /backup/finance/current
+comment = finance backup
+read only = no
+list = yes
+auth users = backupuser
+secrets file = /etc/rsyncd.secrets
+hosts allow = 192.0.2.10,192.0.2.20,192.0.2.100
+hosts deny = *
+
+[checksums]
+path = /backup/checksums/source
+comment = source md5 files
+read only = no
+list = yes
+auth users = backupuser
+secrets file = /etc/rsyncd.secrets
+hosts allow = 192.0.2.10,192.0.2.20,192.0.2.100
+hosts deny = *
+
+[lun01_upload]
+path = /backup/lun01/incoming
+read only = no
+uid = backupsvc
+gid = backupsvc
+auth users = lun01backup
+secrets file = /etc/rsyncd.lun01.secrets
+hosts allow = 192.0.2.50
+hosts deny = *
+use chroot = no
+fake super = no
+
+[lun01_receipt]
+path = /backup/lun01/receipt
+read only = yes
+uid = backupsvc
+gid = backupsvc
+auth users = lun01backup
+secrets file = /etc/rsyncd.lun01.secrets
+hosts allow = 192.0.2.50
+hosts deny = *
+use chroot = no
+fake super = no
+
+[lun01_restore]
+path = /backup/.lun01-history
+read only = yes
+uid = root
+gid = root
+auth users = lun01backup
+secrets file = /etc/rsyncd.lun01.secrets
+hosts allow = 192.0.2.50
+hosts deny = *
+use chroot = no
+fake super = no

@@ -1,0 +1,10 @@
+[Unit]
+Description=Run push-backup every day
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=24h
+Unit=push-backup.service
+
+[Install]
+WantedBy=timers.target

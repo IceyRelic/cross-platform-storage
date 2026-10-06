@@ -1,0 +1,22 @@
+# 仅本地填写并合并；不包含旧私人remote_write/邮件账号或corp_id。
+global:
+  resolve_timeout: 5m
+  http_config:
+    proxy_url: http://127.0.0.1:43128
+    no_proxy: 127.0.0.1,localhost
+route:
+  receiver: wechat-private
+  group_by: [alertname, instance, name]
+  group_wait: 30s
+  group_interval: 2m
+  repeat_interval: 2h
+receivers:
+  - name: wechat-private
+    wechat_configs:
+      - corp_id: FILL_LOCALLY
+        api_secret: FILL_LOCALLY
+        agent_id: FILL_LOCALLY
+        to_user: FILL_LOCALLY
+        message_type: markdown
+        send_resolved: true
+# 若实际Squid需认证，只在受限私有配置中设置用户名/密码；不提交Git。

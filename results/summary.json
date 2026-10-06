@@ -1,0 +1,84 @@
+{
+  "evidence_date": "2026-10-05",
+  "new_tests_in_publication": false,
+  "scope": "existing lab observations, not current availability",
+  "topology": {
+    "storage_nodes": 2,
+    "drbd_resources": 4,
+    "protocols": [
+      "NFS",
+      "SMB",
+      "iSCSI"
+    ]
+  },
+  "automatic_failover_ack_validation": {
+    "forward_files": 70,
+    "reverse_files": 214,
+    "total_files": 284,
+    "independent_reopen_sha_match": true,
+    "all_inflight_or_full_disk_loss_free_claimed": false
+  },
+  "protected_history": {
+    "shared_names": [
+      "design",
+      "dev",
+      "finance"
+    ],
+    "versions_per_share": 7,
+    "lun_versions_observed": 6,
+    "lun_natural_seven_versions_verified": false
+  },
+  "independent_restore": {
+    "files": 33,
+    "objects": 44,
+    "metadata_matched": true
+  },
+  "stability": {
+    "seconds_approx": 1800,
+    "payload_bytes_per_round": 4194304,
+    "rounds": {
+      "NFS": 14880,
+      "iSCSI": 14636,
+      "SMB": 10114
+    },
+    "total_rounds": 39630,
+    "checksum_errors": 0,
+    "nfs_pause_seconds_observed": 5.154,
+    "same_file_repeated_overwrite": true
+  },
+  "recovery_samples_seconds_request_to_first_ack_after_off_confirmed": {
+    "forward": {
+      "iSCSI": 34.573,
+      "SMB": 40.8,
+      "NFS": 58.169
+    },
+    "reverse": {
+      "iSCSI": 11.536,
+      "SMB": 10.144,
+      "NFS": 103.767
+    }
+  },
+  "monitoring": {
+    "snapshot_targets_up": 10,
+    "alert_rules": 41,
+    "wechat_test_and_natural_backup_receipt_confirmed": true,
+    "all_alert_receipts_verified": false
+  },
+  "permissions": {
+    "design": [
+      "designgrp",
+      "finance1-read-only"
+    ],
+    "finance": [
+      "financegrp"
+    ]
+  },
+  "lun_sample": {
+    "ordinary_file_experiment": true,
+    "production_sample_objects": 1,
+    "capacity_namespace_enospc_checks": true,
+    "database_consistency_tested": false
+  },
+  "public_templates_deployed": false,
+  "current_cold_start_state_verified_healthy": false
+}

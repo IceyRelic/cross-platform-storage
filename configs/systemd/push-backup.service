@@ -1,0 +1,6 @@
+[Unit]
+Description=Push storage data to backup-01 by rsync
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /usr/local/bin/push-backup.sh

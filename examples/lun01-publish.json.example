@@ -1,0 +1,9 @@
+{
+  "work": "/var/lib/lun01-file-backup",
+  "incoming": "/backup/lun01/incoming",
+  "metric": "/var/lib/node_exporter/textfile_collector/lun01-publish.prom",
+  "receipt": "/backup/lun01/receipt",
+  "receipt_gid": 991,
+  "role": "publish",
+  "history": "/backup/.lun01-history"
+}

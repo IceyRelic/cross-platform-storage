@@ -1,0 +1,10 @@
+[Unit]
+Description=LUN ordinary-file publish with verified source and private checkpoints
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python /usr/local/sbin/lun01-file-backup.py
+TimeoutStartSec=30min
+UMask=0077

@@ -1,0 +1,12 @@
+# DRBD回调/OCF监控以drbd_t运行，需要连接Pacemaker cluster_t的本地Unix IPC。
+# 只补connectto；不放宽文件权限、网络端口或切换SELinux为Permissive。
+# 类型规则覆盖cluster_t域Unix stream socket，SELinux类型规则不能限于名为cib_rw的单个抽象socket。
+module codex_drbd_cib_ipc 1.0;
+
+require {
+    type drbd_t;
+    type cluster_t;
+    class unix_stream_socket connectto;
+}
+
+allow drbd_t cluster_t:unix_stream_socket connectto;

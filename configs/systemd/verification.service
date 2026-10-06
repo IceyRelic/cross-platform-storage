@@ -1,0 +1,6 @@
+[Unit]
+Description=verification MD5 manifest files
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /usr/local/bin/verification.sh
